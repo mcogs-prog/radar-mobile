@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#102c46"><meta name="description" content="RADAR Mobile — lokalna analiza tekstu">
+<link rel="manifest" href="./manifest.webmanifest"><title>RADAR Mobile 0.1</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#182c40;background:#edf3f8}*{box-sizing:border-box}
+body{margin:0}main{max-width:800px;margin:auto;padding:18px}header{background:#102c46;color:white;padding:25px 20px;border-radius:18px;margin:10px 0 18px}
+header strong{font-size:1.65rem}header p{color:#c8d8e7;margin-bottom:0}.card{background:white;border-radius:16px;padding:20px;margin:16px 0;box-shadow:0 2px 12px #102c4612}
+h1,h2{margin-top:0}label{display:block;font-weight:600;margin:10px 0 6px}textarea{width:100%;padding:12px;border:1px solid #b6c6d4;border-radius:10px;font:inherit;resize:vertical}
+button{border:0;border-radius:10px;padding:12px 16px;background:#0a658d;color:white;font:inherit;font-weight:650;cursor:pointer;margin:5px 6px 5px 0}
+button.secondary{background:#e6eef4;color:#143951}.hint,footer{color:#5d7183;font-size:.91rem;line-height:1.5}
+.claim{border-top:1px solid #e0e9ef;padding:14px 0;overflow-wrap:anywhere}.claim strong{display:block}.meta{font-size:.86rem;color:#536c7f}
+#status{min-height:1.5em}footer{text-align:center;padding:15px}.source{margin-bottom:8px}
+</style></head><body><main>
+<header><strong>◎ RADAR <small>Mobile 0.1</small></strong><p>Lokalna analiza tekstu · PL / EN / DE · wersja testowa</p></header>
+<section class="card"><h1>Sprawdź tekst</h1><label for="article">Tekst artykułu</label>
+<textarea id="article" rows="9" maxlength="100000" placeholder="Wklej treść artykułu..."></textarea>
+<p class="hint">Analiza odbywa się w przeglądarce. Nie pobieramy artykułów z URL ani nie przesyłamy tekstu na serwer.</p>
+<button id="analyze">Analizuj lokalnie</button><button id="clear" class="secondary">Wyczyść</button><p id="status" role="status" aria-live="polite"></p></section>
+<section class="card"><h2>Źródła do porównania</h2><p class="hint">Opcjonalnie wklej do 5 fragmentów. Podobieństwo tekstów nie potwierdza faktów.</p><div id="sources"></div></section>
+<section class="card" id="results" hidden><h2>Wyniki</h2><p id="summary"></p><div id="claims"></div><h3>Sygnały językowe</h3><div id="signals"></div><button id="export">Eksportuj raport JSON</button></section>
+<footer>RADAR Mobile 0.1 · Wyniki heurystyczne, nie werdykt fact-checkingowy.</footer></main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+for(let i=1;i<=5;i++){let d=document.createElement('div');d.className='source';let l=document.createElement('label');l.htmlFor='s'+i;l.textContent='Źródło '+i;let t=document.createElement('textarea');t.id='s'+i;t.rows=2;t.maxLength=15000;d.append(l,t);$('sources').append(d)}
+let report=null;
+const numeric=/\d/,date=/\b(?:\d{1,2}[.\/-]\d{1,2}(?:[.\/-]\d{2,4})?|\d{4}|stycznia|lutego|marca|kwietnia|maja|czerwca|lipca|sierpnia|września|października|listopada|grudnia|january|february|march|april|may|june|july|august|september|october|november|december)\b/i;
+const signalPatterns=[[/\b(zawsze|nigdy|wszyscy|każdy|always|never|everyone|immer|niemals|alle)\b/gi,'Uogólnienie lub język absolutny'],[/\b(szok|skandal|sensacja|shock|scandal|shocking|skandalös)\b/gi,'Sformułowanie nacechowane emocjonalnie'],[/!{2,}/g,'Wielokrotne wykrzykniki']];
+function sentences(t){return (t.replace(/\b(\d+)\.\s+(?=kolejc[eaęy]|rund[eaęy]|place|round|spieltag)/gi,'$1§ ').match(/[^.!?\n]+(?:[.!?]+|$)/g)||[]).map(x=>x.replaceAll('§','.').trim()).filter(Boolean)}
+function words(t){return new Set((t.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu)||[]).filter(x=>!['oraz','jest','który','that','with','und','der','die','das'].includes(x)))}
+function overlap(a,b){const x=words(a),y=words(b);if(!x.size||!y.size)return 0;let n=0;for(const w of x)if(y.has(w))n++;return n/x.size}
+function add(parent,tag,content,cls){const e=document.createElement(tag);e.textContent=content;if(cls)e.className=cls;parent.append(e);return e}
+function analyze(){const text=$('article').value.trim();if(text.length<25){$('status').textContent='Wklej co najmniej 25 znaków.';return}
+const src=Array.from({length:5},(_,i)=>({name:'Źródło '+(i+1),text:$('s'+(i+1)).value.trim()})).filter(x=>x.text);
+const claims=sentences(text).filter(s=>s.length>=25&&s.length<=700&&(numeric.test(s)||date.test(s)||/\b(według|twierdzi|ogłosił|confirmed|reported|according|laut|berichtete)\b/i.test(s))).slice(0,40).map((s,i)=>({id:i+1,text:s,reason:date.test(s)?'Zawiera datę lub liczbę, którą można sprawdzić.':numeric.test(s)?'Zawiera dane liczbowe.':'Zawiera wypowiedź lub przypisanie informacji do źródła.',comparisons:src.map(x=>({name:x.name,overlap:Math.round(overlap(s,x.text)*100)}))}));
+const signals=[];for(const [re,label] of signalPatterns){const matches=text.match(re)||[];if(matches.length)signals.push({label,count:matches.length})}
+report={app:'RADAR Mobile',version:'0.1.0',createdAt:new Date().toISOString(),method:'local heuristic; not factual verification',inputLength:text.length,claims,signals,sourceCount:src.length};
+$('claims').replaceChildren();$('signals').replaceChildren();$('results').hidden=false;
+$('summary').textContent='Wykryto '+claims.length+' kandydatów na twierdzenia. Źródła do porównania: '+src.length+'.';
+if(!claims.length)add($('claims'),'p','Nie znaleziono kandydatów spełniających reguły. Nie oznacza to, że tekst został zweryfikowany.');
+for(const c of claims){const d=add($('claims'),'article','', 'claim');add(d,'strong',c.id+'. '+c.text);add(d,'p',c.reason,'meta');for(const x of c.comparisons)add(d,'p',x.name+': pokrycie słów '+x.overlap+'% (nie dowodzi prawdziwości).','meta')}
+if(!signals.length)add($('signals'),'p','Nie wykryto sygnałów objętych obecnymi regułami.');
+for(const s of signals)add($('signals'),'p',s.label+': '+s.count);
+$('status').textContent='Analiza wykonana lokalnie.';$('results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+$('analyze').addEventListener('click',analyze);
+$('clear').addEventListener('click',()=>{$('article').value='';for(let i=1;i<=5;i++)$('s'+i).value='';$('results').hidden=true;$('status').textContent='Wyczyszczono.';report=null});
+$('export').addEventListener('click',()=>{if(!report)return;const u=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=u;a.download='RADAR-Mobile-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)});
+if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
+</script></body></html>
