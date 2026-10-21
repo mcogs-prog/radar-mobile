@@ -1,12 +1,12 @@
 {
   "name": "RADAR Mobile",
   "short_name": "RADAR",
-  "description": "Lokalna analiza tekstu — wersja testowa",
+  "description": "RADAR Mobile 0.2 — Intelligence Dashboard, lokalna analiza tekstu",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#edf3f8",
-  "theme_color": "#102c46",
+  "background_color": "#071421",
+  "theme_color": "#071421",
   "lang": "pl",
   "icons": [
     {
