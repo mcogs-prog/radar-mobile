@@ -1,5 +1,5 @@
 'use strict';
-const CACHE = 'radar-mobile-0.4.1';
+const CACHE = 'radar-mobile-0.4.1-hotfix1';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
 const assetUrls = new Set(ASSETS.map(path => new URL(path, self.registration.scope).href));
 self.addEventListener('install', event => {
@@ -11,6 +11,10 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.method !== 'GET' || request.mode === 'navigate' && new URL(request.url).origin !== self.location.origin) return;
+  if (request.mode === 'navigate') {
+    event.respondWith(fetch(request, {cache:'no-store'}).catch(async () => (await caches.match('./index.html')) || Response.error()));
+    return;
+  }
   const url = new URL(request.url);
   // Only known application assets can be cached. Never cache arbitrary URLs or query variants.
   if (url.origin !== self.location.origin || !assetUrls.has(url.href) || url.search || url.hash) return;
