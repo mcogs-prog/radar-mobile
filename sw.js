@@ -1,5 +1,5 @@
 'use strict';
-const CACHE = 'radar-mobile-0.4.0';
+const CACHE = 'radar-mobile-0.4.1';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
 const assetUrls = new Set(ASSETS.map(path => new URL(path, self.registration.scope).href));
 self.addEventListener('install', event => {
