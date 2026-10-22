@@ -44,5 +44,5 @@ $('status').textContent='Analiza wykonana lokalnie.';$('results').scrollIntoView
 $('analyze').addEventListener('click',analyze);
 $('clear').addEventListener('click',()=>{$('article').value='';for(let i=1;i<=5;i++)$('s'+i).value='';$('results').hidden=true;$('status').textContent='Wyczyszczono.';report=null});
 $('export').addEventListener('click',()=>{if(!report)return;const u=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=u;a.download='RADAR-Mobile-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)});
-if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
+if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 </script></body></html>
